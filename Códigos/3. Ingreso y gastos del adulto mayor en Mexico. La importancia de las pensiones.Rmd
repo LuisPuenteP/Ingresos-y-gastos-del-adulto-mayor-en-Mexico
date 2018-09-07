@@ -1,0 +1,2226 @@
+---
+title: "Ingresos y gastos del adulto mayor en México: la importancia de las pensiones"
+author: "CONSAR-CGPEyPE"
+date: "Agosto de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+library(plotly)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(stringr)
+library(knitr)
+library(mxmaps)
+library(haven)
+library(stringr)
+library(readxl)
+library(rgdal)
+library(maptools)
+library(rgeos)
+library(extrafont)
+library(png)
+library(scales)
+```
+
+<style>
+body{
+font-size: 12pt;
+}
+</style>
+
+# {.tabset .tabset-fade .tabset-pills}
+
+## Introducción {.tabset .tabset-fade .tabset-pills}
+
+### Presentación
+
+<br>
+Esta investigación forma parte de la serie de documentos de trabajo de la Comisión Nacional del Sistema de Ahorro para el Retiro (CONSAR), los cuales divulgan resultados preliminares de investigación económica y tienen por objetivo ofrecer un canal de información para incentivar la discusión y el debate de las pensiones en México.
+
+<br><br><br><br>
+
+Presidente de la Comisión:<br>
+Carlos Ramírez Fuentes<br><br>
+
+Coordinadora General de Planeación Estratégica y Proyectos Especiales:<br>
+Fernanda Vaudrecourt Salcido<br><br>
+
+Director General Adjunto (coordinador del documento):<br>
+Roberto Reynoso Valenzuela<br><br>
+
+Director de área (autor del documento):<br>
+Luis Federico Puente Peña<br><br>
+
+Se agradecen ampliamente los comentarios de Carlos Ramírez, Roberto Reynoso, Paola Pernas y Gerardo Mejía, así como la valiosa colaboración de Diego Zurita y Alejandro Alvarado en la elaboración de este documento..
+
+
+### Objetivo
+
+#### Objetivo del proyecto:
+* Describir el perfil de los adultos mayores (personas de 65 años y más).
+* Realizar un diagnóstico de los ingresos y gastos de las personas de 65 años y los hogares donde viven.
+
+#### Importancia del proyecto:
+* Mostrar la relevancia de las pensiones (contributiva y no contributiva) en el ingreso y gasto de los adultos mayores.
+
+
+### Datos y Metodología
+
+#### Datos:
+
+* Datos: Encuesta Nacional de Ingresos y Gastos de los Hogares (ENIGH) de 1992 a 2016. 
+
+* Diseño muestral: probabilístico, estratificado, bietápico y por conglomerados. 
+
+* Unidad de muestreo: vivienda. 
+
+* Unidad de análisis: vivienda, hogar y los integrantes del hogar. 
+
+* Representatividad: en al año 2016 la ENIGH tiene representatividad nacional, por entidad federativa y por zonas rurales y urbanas. 
+
+* Consideraciones de inferencia: las estadísticas que se presenta a continuación consideran el diseño muestral (unidades primarias de muestreo y estratos) y utilizan factores de expansión, errores estándar (método de linealización de Taylor), intervalos de confianza (95%) y coeficientes de variación. 
+
+<br>
+
+#### Población objetivo:
+
+* Personas de 65 años y más (sin considerar huéspedes y trabajadores domésticos).
+* Hogares con personas de 65 años y más.
+
+<br>
+
+#### Definición de ingresos y gastos
+
+* La definición de ingreso corresponde a la establecida por el CONEVAL para la medición de la pobreza multidimensional. Con la salvedad de que la presente investigación realiza una mayor desagregación del ingreso y en algunos casos el nivel de análisis es individual.
+* El ingreso monetario se captura a nivel individual en la ENIGH por lo que su análisis se realiza para los adultos mayores.
+* El ingreso no monetario y el gasto se recaban principalmente a nivel hogar por lo que su análisis utiliza escalas de equivalencia (que consideran al adulto mayor) para pasar los recursos del hogar a términos por persona.
+* Los ingresos y gastos se expresan en pesos de agosto de 2016.
+
+<br>
+
+#### Definición de pensión
+
+* La definición de cobertura de pensión utiliza los siguientes criterios:
+    + Pensión contributiva: cuando se declara ingresos por jubilaciones y/o pensiones.
+    + Pensión no contributiva: cuando se declara ingresos por programas para adultos mayores.
+
+
+## Cobertura {.tabset .tabset-fade .tabset-pills}
+
+### Histórico
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+# Aquí se cargan las bases de datos
+setwd("D:/ENIGH/bases")
+getwd()
+datos <- read.csv(file = "Estadisticas_personas_65ymas.csv", header = TRUE)
+
+datos <- plyr::rename (datos, c("variable"="Variable","periodo"="Año","valor"="Total"))
+
+datos$Año <- substr(datos$Año,1, 4)
+
+datos$Total[datos$Total==0]<- NA
+
+datos_millones<- filter(datos, u_medida %in% c("Frecuencia"))
+datos_millones$Total <- datos_millones$Total/1000000
+datos_millones$LI <- datos_millones$LI/1000000
+datos_millones$LS <- datos_millones$LS/1000000
+datos_millones$CV <- round(datos_millones$CV,1)
+
+datos_porcent<- filter(datos, u_medida %in% c("Proporcion"))
+datos_porcent$Total <- datos_porcent$Total*100
+datos_porcent$LI <- datos_porcent$LI*100
+datos_porcent$LS <- datos_porcent$LS*100
+datos_porcent$CV <- round(datos_porcent$CV,1)
+
+datos <- read.csv(file = "Estadisticas_hogares.csv", header = TRUE)
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+
+datos_grafica<- filter(datos_millones, Variable %in% c("d_nocontp","d_contp", "d_pension"))
+
+datos_grafica$Variable <- str_replace_all(datos_grafica$Variable, "d_nocontp", "Pensión no contributiva")
+datos_grafica$Variable <- str_replace_all(datos_grafica$Variable, "d_contp", "Pensión contributiva")
+datos_grafica$Variable <- str_replace_all(datos_grafica$Variable, "d_pension", "Pensión")
+
+orden<-c("Pensión contributiva","Pensión no contributiva", "Pensión")
+datos_grafica$Variable<- factor(datos_grafica$Variable, levels=as.character(orden))
+
+Situacion_pens_65mas_Frec<-
+  ggplot(datos_grafica, 
+         aes(x=Año, y=Total, colour=Variable, 
+             text = paste("Año:", Año, "<br>Variable:", Variable,  
+                          "<br>Número de personas:", format(round(Total*1000000,0),big.mark=",",scientific=FALSE), "<br>Límite superior:", format(round(LS*1000000,0),big.mark=",",scientific=FALSE),
+                          "<br>Límite inferior:", format(round(LI*1000000,0),big.mark=",",scientific=FALSE),
+                          "<br>Coef. de variación:", CV))) + 
+    geom_point() +
+    geom_text(aes(label=round(Total,1)),size = 2.5, nudge_x = 0.40) +    
+    theme_bw() + 
+    scale_colour_manual(values = c( "blue", "red","olivedrab")) + 
+    ggtitle("Situación pensionaria") +
+  theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black"))
+
+ggplotly(Situacion_pens_65mas_Frec, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Año"),
+         yaxis = list(title = "Millones de personas"),
+         legend = list(orientation = 'h'))
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+
+d_pension<- filter(datos_porcent, Variable %in% c("d_pension"))
+d_nocontp<- filter(datos_porcent, Variable %in% c("d_nocontp"))
+d_contp<- filter(datos_porcent, Variable %in% c("d_contp"))
+d_pension$Total[d_pension$Año==c("1992","1994","1996","1998","2000","2002","2004","2006")]<- NA
+datos_grafica<-rbind(d_pension, d_nocontp, d_contp)
+rm('d_pension', 'd_nocontp', 'd_contp')
+
+datos_grafica$Variable <- str_replace_all(datos_grafica$Variable, "d_nocontp", "Pensión no contributiva")
+datos_grafica$Variable <- str_replace_all(datos_grafica$Variable, "d_contp", "Pensión contributiva")
+datos_grafica$Variable <- str_replace_all(datos_grafica$Variable, "d_pension", "Pensión")
+
+orden<-c("Pensión contributiva","Pensión no contributiva", "Pensión")
+datos_grafica$Variable<- factor(datos_grafica$Variable, levels=as.character(orden))
+
+Situacion_pens_65mas_Prop<-ggplot(datos_grafica, aes(x=Año, y=Total , 
+    text = paste("Año:", Año, "<br>Variable:", Variable,  
+                          "<br>Porcentaje:", paste(round(Total,1),"%"), "<br>Límite superior:", paste(round(LS,1),"%"),
+                          "<br>Límite inferior:", paste(round(LI,1),"%"),
+                          "<br>Coef. de variación:", CV))) + 
+    geom_bar(stat = "identity", position = "dodge", aes(fill= Variable), width = .5)+    
+    theme_bw() +
+    geom_text(aes(label=round(Total,0), y=Total+1, x=Año, group= Variable), size = 2.5, 
+              position=position_dodge(.5)) + 
+    scale_fill_manual(breaks = c("Pensión contributiva","Pensión no contributiva", "Pensión"),values = c( "blue", "red","olivedrab")) + 
+    ggtitle("Situación pensionaria") +
+  theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black"))
+
+ggplotly(Situacion_pens_65mas_Prop, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Año"),
+         yaxis = list(title = "Porcentaje"),
+         legend = list(orientation = 'h'))
+
+```
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/cobertura pensionaria y características de los AM.csv")
+
+datos$variable      <- as.character(datos$variable)
+datos$categoria <- as.character(datos$categoria)
+
+#Condicion pensionaria
+datos$categoria2[datos$categoria=="d_contributivas"] <- "Pensión contributiva"
+datos$categoria2[datos$categoria=="d_no_contri"] <- "Pensión no contributiva"
+datos$categoria2[datos$categoria=="d_pension"] <- "Con pensión"
+datos$categoria2[datos$categoria=="d_sin_pen"] <- "Sin pensión"
+datos$categoria2[datos$categoria=="unos"] <- "Total"
+
+datos$categoria[datos$categoria=="d_contributivas"] <- "Pensión<br> contributiva"
+datos$categoria[datos$categoria=="d_no_contri"] <- "Pensión no<br> contributiva"
+datos$categoria[datos$categoria=="d_pension"] <- "Con pensión"
+datos$categoria[datos$categoria=="d_sin_pen"] <- "Sin pensión"
+datos$categoria[datos$categoria=="unos"] <- "Total"
+
+#Género
+datos$variable[datos$variable=="d_hombre1"] <- "Mujeres"
+datos$variable[datos$variable=="d_hombre2"] <- "Hombres"
+
+#Edad
+datos$variable[datos$variable=="rangos_edad1"] <- "65 a 69 años"
+datos$variable[datos$variable=="rangos_edad2"] <- "70 a 74 años"
+datos$variable[datos$variable=="rangos_edad3"] <- "75 a 79 años"
+datos$variable[datos$variable=="rangos_edad4"] <- "80 y más años"
+
+#Educación
+datos$variable[datos$variable=="educacion1"] <- "Sin primaria"
+datos$variable[datos$variable=="educacion2"] <- "Primaria"
+datos$variable[datos$variable=="educacion3"] <- "Secundaria"
+datos$variable[datos$variable=="educacion4"] <- "Preparatoria"
+datos$variable[datos$variable=="educacion5"] <- "Profesional"
+datos$variable[datos$variable=="educacion6"] <- "Posgrado"
+
+#Servicio de salud
+datos$variable[datos$variable=="serv_sal1"] <- "Sin servicio"
+datos$variable[datos$variable=="serv_sal2"] <- "Seguro popular"
+datos$variable[datos$variable=="serv_sal3"] <- "IMSS"
+datos$variable[datos$variable=="serv_sal4"] <- "ISSSTE o <br>ISSSTE estatal"
+datos$variable[datos$variable=="serv_sal5"] <- "Pemex, Defensa <br>o Marina"
+datos$variable[datos$variable=="serv_sal6"] <- "Seguro privado <br>de gastos médicos"
+datos$variable[datos$variable=="serv_sal7"] <- "Otros"
+
+#Estado civil
+datos$variable[datos$variable=="edo_civil1"] <- "Soltero"
+datos$variable[datos$variable=="edo_civil2"] <- "Casado<br>o unión libre"
+datos$variable[datos$variable=="edo_civil3"] <- "Separado<br>o divorciado"
+datos$variable[datos$variable=="edo_civil4"] <- "Viudo"
+
+#Clase de hogar
+datos$variable[datos$variable=="clase_hog1"] <- "Unipersonal"
+datos$variable[datos$variable=="clase_hog2"] <- "Nuclear"
+datos$variable[datos$variable=="clase_hog3"] <- "Ampliado"
+datos$variable[datos$variable=="clase_hog4"] <- "Compuesto"
+datos$variable[datos$variable=="clase_hog5"] <- "Corresidente"
+
+#Tipo de vivienda
+datos$variable[datos$variable=="tipo_viv1"] <- "Vivienda propia <br>y dueño"
+datos$variable[datos$variable=="tipo_viv2"] <- "Vivienda propia <br>y no dueño"
+datos$variable[datos$variable=="tipo_viv3"] <- "Vivienda <br>no propia"
+
+#Rural/urbano
+datos$variable[datos$variable=="rururb1"] <- "Urbano"
+datos$variable[datos$variable=="rururb2"] <- "Rural"
+
+#Entidad
+datos$variable[datos$variable=="ent_1"]  <- "AGS"
+datos$variable[datos$variable=="ent_2"]  <- "BC"
+datos$variable[datos$variable=="ent_3"]  <- "BCS"
+datos$variable[datos$variable=="ent_4"]  <- "CAMP"  
+datos$variable[datos$variable=="ent_5"]  <- "COAH"
+datos$variable[datos$variable=="ent_6"]  <- "COL"
+datos$variable[datos$variable=="ent_7"]  <- "CHPS"
+datos$variable[datos$variable=="ent_8"]  <- "CHIH"
+datos$variable[datos$variable=="ent_9"]  <- "CDMX"
+datos$variable[datos$variable=="ent_10"] <- "DGO"
+datos$variable[datos$variable=="ent_11"] <- "GTO"
+datos$variable[datos$variable=="ent_12"] <- "GRO"
+datos$variable[datos$variable=="ent_13"] <- "HGO"
+datos$variable[datos$variable=="ent_14"] <- "JAL"
+datos$variable[datos$variable=="ent_15"] <- "MEX"
+datos$variable[datos$variable=="ent_16"] <- "MICH"
+datos$variable[datos$variable=="ent_17"] <- "MOR"
+datos$variable[datos$variable=="ent_18"] <- "NAY"
+datos$variable[datos$variable=="ent_19"] <- "NL"
+datos$variable[datos$variable=="ent_20"] <- "OAX"
+datos$variable[datos$variable=="ent_21"] <- "PUE"
+datos$variable[datos$variable=="ent_22"] <- "QRO"
+datos$variable[datos$variable=="ent_23"] <- "QROO"
+datos$variable[datos$variable=="ent_24"] <- "SLP"
+datos$variable[datos$variable=="ent_25"] <- "SIN"
+datos$variable[datos$variable=="ent_26"] <- "SON"
+datos$variable[datos$variable=="ent_27"] <- "TAB"
+datos$variable[datos$variable=="ent_28"] <- "TAM"
+datos$variable[datos$variable=="ent_29"] <- "TLAX"
+datos$variable[datos$variable=="ent_30"] <- "VER"
+datos$variable[datos$variable=="ent_31"] <- "YUC"
+datos$variable[datos$variable=="ent_32"] <- "ZAC"
+
+```
+
+
+### Cobertura 2016
+
+```{r echo=FALSE , message=FALSE , warning=FALSE, out.width = "800px"}
+knitr::include_graphics("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Documento/Gráficas/Tabla 4.1.png")
+```
+
+
+###Género
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Mujeres" | datos$variable=="Hombres" )
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Hombres","Mujeres")
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=csum*100-0.5*valor_p*100,label=paste(round(valor_p*100,0),"%")), size = 4,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("blue","red")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por género")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje")) 
+
+```
+
+### Edad
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="65 a 69 años" | datos$variable=="70 a 74 años" | datos$variable=="75 a 79 años" | datos$variable=="80 y más años" )
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("65 a 69 años","70 a 74 años","75 a 79 años","80 y más años" )
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100, group=variable,label=round(valor_p*100,0),text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "dodge", aes(fill= variable), width = .8) +
+    geom_text(aes(x=categoria, y=valor_p*100+2),angle = 90, size = 4,colour = "black", fontface = "bold",position=position_dodge(0.9)) + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold",
+  color = "black"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por edad")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Trabajo y género
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="d_hom_trab" | datos$variable=="d_hom_notrab" | datos$variable=="d_muj_trab"| datos$variable=="d_muj_notrab")
+datos_graf<- filter(datos_graf, datos_graf$valor_f!=0)
+
+datos_graf$genero [datos_graf$variable=="d_hom_trab"]<- "Hombres"
+datos_graf$genero [datos_graf$variable=="d_hom_notrab"]<- "Hombres"
+datos_graf$genero [datos_graf$variable=="d_muj_trab"]<- "Mujeres"
+datos_graf$genero [datos_graf$variable=="d_muj_notrab"]<- "Mujeres"
+
+datos_graf$trabajo [datos_graf$variable=="d_hom_trab"]<- "Trabaja"
+datos_graf$trabajo [datos_graf$variable=="d_hom_notrab"]<- "No trabaja"
+datos_graf$trabajo [datos_graf$variable=="d_muj_trab"]<- "Trabaja"
+datos_graf$trabajo [datos_graf$variable=="d_muj_notrab"]<- "No trabaja"
+
+datos_graf$categoria2 <- paste(datos_graf$categoria,datos_graf$genero)
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria2 , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Mujeres","Hombres")
+datos_graf$genero<- factor(datos_graf$genero, levels=as.character(orden))
+
+orden<-c("No trabaja","Trabaja")
+datos_graf$trabajo <- factor(datos_graf$trabajo, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= trabajo), width = .5) +
+    geom_text(aes(x=categoria, y=csum*100-0.5*valor_p*100,label=paste(round(valor_p*100,0),"%")), size = 3,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("red","blue")) +
+    theme_bw() +
+  theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(angle = 90, hjust = 1,colour = "black")) +
+  facet_wrap(~genero,scales="free_y",ncol= 2, drop=TRUE)+ labs(x = "",y="") + ggtitle("Distribución por condición laboral")
+
+ggplotly(p, width = 750, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "",position=1),
+         yaxis = list(title = "Porcentaje"))
+```
+
+
+### Educación
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Sin primaria" | datos$variable=="Primaria" | datos$variable=="Secundaria" | datos$variable=="Preparatoria" | datos$variable=="Profesional"| datos$variable=="Posgrado")
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Sin primaria","Primaria","Secundaria","Preparatoria","Profesional","Posgrado")
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100, group=variable,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "dodge", aes(fill= variable), width = .8) +
+    geom_text(aes(x=categoria, y=valor_p*100+2,group=variable,label=round(valor_p*100,0)), size = 4,colour = "black", fontface = "bold",position=position_dodge(1)) + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por educación")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Salud
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Sin servicio" | datos$variable=="Seguro popular" | datos$variable=="IMSS" | datos$variable=="ISSSTE o <br>ISSSTE estatal" | datos$variable=="Pemex, Defensa <br>o Marina"| datos$variable=="Seguro privado <br>de gastos médicos"| datos$variable=="Otros")
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Sin servicio","Seguro popular","IMSS","ISSSTE o <br>ISSSTE estatal","Pemex, Defensa <br>o Marina","Seguro privado <br>de gastos médicos","Otros" )
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100, group=variable,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "dodge", aes(fill= variable), width = .8) +
+    geom_text(aes(x=categoria, y=valor_p*100+2,group=variable,label=round(valor_p*100,0)), size = 4,colour = "black", fontface = "bold",position=position_dodge(1)) + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por sistema de salud")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Estado civil
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Soltero" | datos$variable=="Casado<br>o unión libre"| datos$variable=="Separado<br>o divorciado" | datos$variable=="Viudo"  )
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Viudo","Separado<br>o divorciado","Casado<br>o unión libre","Soltero")
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=csum*100-0.5*valor_p*100,label=paste(round(valor_p*100,0),"%")), size = 4,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por estado civil")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Tipo de hogar 
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Unipersonal" | datos$variable=="Nuclear" | datos$variable=="Ampliado" | datos$variable=="Compuesto" | datos$variable=="Corresidente")
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Unipersonal","Nuclear","Ampliado","Compuesto","Corresidente")
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100, group=variable,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "dodge", aes(fill= variable), width = .8) +
+    geom_text(aes(x=categoria, y=valor_p*100+2,group=variable,label=round(valor_p*100,0)), size = 4,colour = "black", fontface = "bold",position=position_dodge(1)) + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por tipo de hogar")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Vivienda
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Vivienda propia <br>y dueño" | datos$variable=="Vivienda propia <br>y no dueño" | datos$variable=="Vivienda <br>no propia")
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c("Vivienda propia <br>y dueño","Nuclear","Vivienda propia <br>y no dueño","Vivienda <br>no propia")
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100, group=variable,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "dodge", aes(fill= variable), width = .8) +
+    geom_text(aes(x=categoria, y=valor_p*100+2,group=variable,label=round(valor_p*100,0)), size = 4,colour = "black", fontface = "bold",position=position_dodge(1)) + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por tipo de vivienda")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Zona
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtra la informacipon
+
+datos_graf<- filter(datos, datos$variable=="Rural" | datos$variable=="Urbano")
+
+datos_graf$csum <- ave(datos_graf$valor_p,datos_graf$categoria , FUN=cumsum)
+datos_graf$csum[datos_graf$valor_p*100<=1] <-NA
+
+# Aquí se ordenan las etiquetas
+orden<-c( "Rural","Urbano")
+datos_graf$variable<- factor(datos_graf$variable, levels=as.character(orden))
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva","Pensión no<br> contributiva","Con pensión","Sin pensión","Total")
+datos_graf$categoria<- factor(datos_graf$categoria, levels=as.character(orden))
+
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_graf, aes(x=categoria, y=valor_p*100,text= paste("Categoría:",variable,
+                                                     "<br>Variable:", categoria2,
+                                                     "<br>Porcentaje:", paste(round(valor_p*100,1),"%"),
+                                                     "<br>Límite inferior:", paste(round(LI_p*100,1),"%"),
+                                                     "<br>Límite superior:", paste(round(LS_p*100,1),"%"),
+                                                     "<br>Coeficiente de variación (%):", round(CV_p,1),
+                                                     "<br>Número de personas:",format(round(valor_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:",format(round(LI_f,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:",format(round(LS_f,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coeficiente de variación (#):", round(CV_f,1)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=csum*100-0.5*valor_p*100,label=paste(round(valor_p*100,0),"%")), size = 4,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna")) +
+    theme_bw() +
+  theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Distribución por zona geográfica")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje"))
+```
+
+### Entidad
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/cobertura pensionaria y entidad de los AM.csv")
+
+datos$categoria<-as.character(datos$categoria)
+
+datos$categoria [datos$categoria =="d_contributivas"] <- "Pensión contributiva"
+datos$categoria [datos$categoria =="d_no_contri"] <- "Pensión no contributiva"
+datos$categoria [datos$categoria =="d_pension"] <- "Con pensión"
+datos$categoria [datos$categoria =="d_sin_pen"] <- "Sin pensión"
+
+#Entidad
+
+df <- df_mxstate
+
+datos$id[datos$variable=="ent1"]  <- "01"
+datos$id[datos$variable=="ent2"]  <- "02"
+datos$id[datos$variable=="ent3"]  <- "03"
+datos$id[datos$variable=="ent4"]  <- "04"  
+datos$id[datos$variable=="ent5"]  <- "05"
+datos$id[datos$variable=="ent6"]  <- "06"
+datos$id[datos$variable=="ent7"]  <- "07"
+datos$id[datos$variable=="ent8"]  <- "08"
+datos$id[datos$variable=="ent9"]  <- "09"
+datos$id[datos$variable=="ent10"] <- "10"
+datos$id[datos$variable=="ent11"] <- "11"
+datos$id[datos$variable=="ent12"] <- "12"
+datos$id[datos$variable=="ent13"] <- "13"
+datos$id[datos$variable=="ent14"] <- "14"
+datos$id[datos$variable=="ent15"] <- "15"
+datos$id[datos$variable=="ent16"] <- "16"
+datos$id[datos$variable=="ent17"] <- "17"
+datos$id[datos$variable=="ent18"] <- "18"
+datos$id[datos$variable=="ent19"] <- "19"
+datos$id[datos$variable=="ent20"] <- "20"
+datos$id[datos$variable=="ent21"] <- "21"
+datos$id[datos$variable=="ent22"] <- "22"
+datos$id[datos$variable=="ent23"] <- "23"
+datos$id[datos$variable=="ent24"] <- "24"
+datos$id[datos$variable=="ent25"] <- "25"
+datos$id[datos$variable=="ent26"] <- "26"
+datos$id[datos$variable=="ent27"] <- "27"
+datos$id[datos$variable=="ent28"] <- "28"
+datos$id[datos$variable=="ent29"] <- "29"
+datos$id[datos$variable=="ent30"] <- "30"
+datos$id[datos$variable=="ent31"] <- "31"
+datos$id[datos$variable=="ent32"] <- "32"
+
+datos$estado[datos$variable=="ent1"]  <- "Aguascalientes"
+datos$estado[datos$variable=="ent2"]  <- "Baja California"
+datos$estado[datos$variable=="ent3"]  <- "Baja California Sur"
+datos$estado[datos$variable=="ent4"]  <- "Campeche"  
+datos$estado[datos$variable=="ent5"]  <- "Coahuila"
+datos$estado[datos$variable=="ent6"]  <- "Colima"
+datos$estado[datos$variable=="ent7"]  <- "Chiapas"
+datos$estado[datos$variable=="ent8"]  <- "Chihuahua"
+datos$estado[datos$variable=="ent9"]  <- "Ciudad de México"
+datos$estado[datos$variable=="ent10"] <- "Durango"
+datos$estado[datos$variable=="ent11"] <- "Guanajuato"
+datos$estado[datos$variable=="ent12"] <- "Guerrero"
+datos$estado[datos$variable=="ent13"] <- "Hidalgo"
+datos$estado[datos$variable=="ent14"] <- "Jalisco"
+datos$estado[datos$variable=="ent15"] <- "Estado de México"
+datos$estado[datos$variable=="ent16"] <- "Michoacán"
+datos$estado[datos$variable=="ent17"] <- "Morelos"
+datos$estado[datos$variable=="ent18"] <- "Nayarit"
+datos$estado[datos$variable=="ent19"] <- "Nuevo León"
+datos$estado[datos$variable=="ent20"] <- "Oaxaca"
+datos$estado[datos$variable=="ent21"] <- "Puebla"
+datos$estado[datos$variable=="ent22"] <- "Querétaro"
+datos$estado[datos$variable=="ent23"] <- "Quintana Roo"
+datos$estado[datos$variable=="ent24"] <- "San Luis Potosí"
+datos$estado[datos$variable=="ent25"] <- "Sinaloa"
+datos$estado[datos$variable=="ent26"] <- "Sonora"
+datos$estado[datos$variable=="ent27"] <- "Tabasco"
+datos$estado[datos$variable=="ent28"] <- "Tamaulipas"
+datos$estado[datos$variable=="ent29"] <- "Tlaxcala"
+datos$estado[datos$variable=="ent30"] <- "Veracruz"
+datos$estado[datos$variable=="ent31"] <- "Yucatán"
+datos$estado[datos$variable=="ent32"] <- "Zacatecas"
+
+capa_estados <-readOGR("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases", layer="ESTADOS")
+
+estados <- fortify(capa_estados, region="CVE_ENT")
+
+```
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+
+
+datos_porcentaje <- filter(datos, datos$categoria=="Pensión contributiva")
+
+centroids <- SpatialPointsDataFrame(gCentroid(capa_estados, byid=TRUE), capa_estados@data, match.ID=F)
+
+centroids <- as.data.frame(centroids)
+
+names(centroids) <- c("id" , "Estado" ,"Longitude", "Latitude") 
+
+datos_porcentaje$valor_p =  round(datos_porcentaje$valor_p*100,0)
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$valor_p, "id" = datos_porcentaje$id)
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+p<- ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=estados_mapa$valor_p,
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$estado,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$valor_p,1),"%"),
+                                    "<br>Número de personas: "     ,         
+                                    format(round(estados_mapa$valor_f,0),big.mark=",",scientific=FALSE), 
+                                    "<br>Límite inferior: ",    
+                                    format(round(estados_mapa$LS_f,0),big.mark=",",scientific=FALSE),
+                                    "<br>Límite superior: ",    
+                                    format(round(estados_mapa$LI_f,0),big.mark=",",scientific=FALSE),
+                                    "<br>Coef. de variación: ", 
+                                    round(estados_mapa$CV_f,1))), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'Blues', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Porcentaje") +
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste(round(datos_porcentaje$valor_p,0),"%")
+                                         ), size=2.5) + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Cobertura de las pensiones contributivas")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+```
+
+<br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br>
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+
+
+datos_porcentaje <- filter(datos, datos$categoria=="Pensión no contributiva")
+
+centroids <- SpatialPointsDataFrame(gCentroid(capa_estados, byid=TRUE), capa_estados@data, match.ID=F)
+
+centroids <- as.data.frame(centroids)
+
+names(centroids) <- c("id" , "Estado" ,"Longitude", "Latitude") 
+
+datos_porcentaje$valor_p =  round(datos_porcentaje$valor_p*100,0)
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$valor_p, "id" = datos_porcentaje$id)
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+p<- ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=estados_mapa$valor_p,
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$estado,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$valor_p,1),"%"),
+                                    "<br>Número de personas: "     ,         
+                                    format(round(estados_mapa$valor_f,0),big.mark=",",scientific=FALSE), 
+                                    "<br>Límite inferior: ",    
+                                    format(round(estados_mapa$LS_f,0),big.mark=",",scientific=FALSE),
+                                    "<br>Límite superior: ",    
+                                    format(round(estados_mapa$LI_f,0),big.mark=",",scientific=FALSE),
+                                    "<br>Coef. de variación: ", 
+                                    round(estados_mapa$CV_f,1))), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'OrRd', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Porcentaje") +
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste(round(datos_porcentaje$valor_p,0),"%")
+                                         ), size=2.5) + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Cobertura de las pensiones no contributivas")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+```
+
+<br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br>
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+
+
+datos_porcentaje <- filter(datos, datos$categoria=="Con pensión")
+
+centroids <- SpatialPointsDataFrame(gCentroid(capa_estados, byid=TRUE), capa_estados@data, match.ID=F)
+
+centroids <- as.data.frame(centroids)
+
+names(centroids) <- c("id" , "Estado" ,"Longitude", "Latitude") 
+
+datos_porcentaje$valor_p =  round(datos_porcentaje$valor_p*100,0)
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$valor_p, "id" = datos_porcentaje$id)
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+p<- ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=estados_mapa$valor_p,
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$estado,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$valor_p,1),"%"),
+                                    "<br>Número de personas: "     ,         
+                                    format(round(estados_mapa$valor_f,0),big.mark=",",scientific=FALSE), 
+                                    "<br>Límite inferior: ",    
+                                    format(round(estados_mapa$LS_f,0),big.mark=",",scientific=FALSE),
+                                    "<br>Límite superior: ",    
+                                    format(round(estados_mapa$LI_f,0),big.mark=",",scientific=FALSE),
+                                    "<br>Coef. de variación: ", 
+                                    round(estados_mapa$CV_f,1))), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'Greens', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Porcentaje") +
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste(round(datos_porcentaje$valor_p,0),"%")
+                                         ), size=2.5) + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Cobertura de las pensiones (contributivas y no contributivas)")
+
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+```
+
+
+
+
+
+
+## Ingresos y gastos {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/ingresos_por_catacterística.csv")
+
+datos$variable      <- as.character(datos$variable)
+datos$categoria <- as.character(datos$categoria)
+
+datos$cum_porcen[datos$porcentaje<=1.5] <-NA
+
+datos$variable [datos$variable =="labo"] <- "Laboral"
+datos$variable [datos$variable =="rent"] <- "Rentas"
+datos$variable [datos$variable =="cont"] <- "Pensión <br>contributiva"
+datos$variable [datos$variable =="no_cont"] <- "Pensión no<br> contributiva"
+datos$variable [datos$variable =="don"] <- "Donativos <br>(familias)"
+datos$variable [datos$variable =="o_trans"] <- "Otras <br>transferencias"
+datos$variable [datos$variable =="ing_mon"] <- "Ingreso <br>monetario"
+orden<-c("Laboral","Rentas", "Pensión <br>contributiva", "Pensión no<br> contributiva","Donativos <br>(familias)" ,"Otras <br>transferencias", "Ingreso <br>monetario")
+datos$variable<- factor(datos$variable, levels=as.character(orden))
+
+#Género
+datos$categoria[datos$categoria=="sex_1"] <- "Hombres"
+datos$categoria[datos$categoria=="sex_2"] <- "Mujeres"
+
+#Quintil
+datos$categoria[datos$categoria=="quin0_1"] <- "I"
+datos$categoria[datos$categoria=="quin0_2"] <- "II"
+datos$categoria[datos$categoria=="quin0_3"] <- "III"
+datos$categoria[datos$categoria=="quin0_4"] <- "IV"
+datos$categoria[datos$categoria=="quin0_5"] <- "V"
+
+#Decil
+datos$categoria[datos$categoria=="dec0_1"] <- "I"
+datos$categoria[datos$categoria=="dec0_2"] <- "II"
+datos$categoria[datos$categoria=="dec0_3"] <- "III"
+datos$categoria[datos$categoria=="dec0_4"] <- "IV"
+datos$categoria[datos$categoria=="dec0_5"] <- "V"
+datos$categoria[datos$categoria=="dec0_6"] <- "VI"
+datos$categoria[datos$categoria=="dec0_7"] <- "VII"
+datos$categoria[datos$categoria=="dec0_8"] <- "VIII"
+datos$categoria[datos$categoria=="dec0_9"] <- "IX"
+datos$categoria[datos$categoria=="dec0_10"] <- "X"
+
+#Edad
+datos$categoria[datos$categoria=="eda_1"] <- "65 a 69 años"
+datos$categoria[datos$categoria=="eda_2"] <- "70 a 74 años"
+datos$categoria[datos$categoria=="eda_3"] <- "75 a 79 años"
+datos$categoria[datos$categoria=="eda_4"] <- "80 y más años"
+
+#Educación
+datos$categoria[datos$categoria=="edu_1"] <- "Sin primaria"
+datos$categoria[datos$categoria=="edu_2"] <- "Primaria"
+datos$categoria[datos$categoria=="edu_3"] <- "Secundaria"
+datos$categoria[datos$categoria=="edu_4"] <- "Preparatoria"
+datos$categoria[datos$categoria=="edu_5"] <- "Profesional"
+datos$categoria[datos$categoria=="edu_6"] <- "Posgrado"
+
+#Entidad
+
+df <- df_mxstate
+
+datos$categoria[datos$categoria=="ent_1"]  <- "AGS"
+datos$categoria[datos$categoria=="ent_2"]  <- "BC"
+datos$categoria[datos$categoria=="ent_3"]  <- "BCS"
+datos$categoria[datos$categoria=="ent_4"]  <- "CAMP"  
+datos$categoria[datos$categoria=="ent_5"]  <- "COAH"
+datos$categoria[datos$categoria=="ent_6"]  <- "COL"
+datos$categoria[datos$categoria=="ent_7"]  <- "CHPS"
+datos$categoria[datos$categoria=="ent_8"]  <- "CHIH"
+datos$categoria[datos$categoria=="ent_9"]  <- "CDMX"
+datos$categoria[datos$categoria=="ent_10"] <- "DGO"
+datos$categoria[datos$categoria=="ent_11"] <- "GTO"
+datos$categoria[datos$categoria=="ent_12"] <- "GRO"
+datos$categoria[datos$categoria=="ent_13"] <- "HGO"
+datos$categoria[datos$categoria=="ent_14"] <- "JAL"
+datos$categoria[datos$categoria=="ent_15"] <- "MEX"
+datos$categoria[datos$categoria=="ent_16"] <- "MICH"
+datos$categoria[datos$categoria=="ent_17"] <- "MOR"
+datos$categoria[datos$categoria=="ent_18"] <- "NAY"
+datos$categoria[datos$categoria=="ent_19"] <- "NL"
+datos$categoria[datos$categoria=="ent_20"] <- "OAX"
+datos$categoria[datos$categoria=="ent_21"] <- "PUE"
+datos$categoria[datos$categoria=="ent_22"] <- "QRO"
+datos$categoria[datos$categoria=="ent_23"] <- "QROO"
+datos$categoria[datos$categoria=="ent_24"] <- "SLP"
+datos$categoria[datos$categoria=="ent_25"] <- "SIN"
+datos$categoria[datos$categoria=="ent_26"] <- "SON"
+datos$categoria[datos$categoria=="ent_27"] <- "TAB"
+datos$categoria[datos$categoria=="ent_28"] <- "TAM"
+datos$categoria[datos$categoria=="ent_29"] <- "TLAX"
+datos$categoria[datos$categoria=="ent_30"] <- "VER"
+datos$categoria[datos$categoria=="ent_31"] <- "YUC"
+datos$categoria[datos$categoria=="ent_32"] <- "ZAC" 
+
+# Aquí se ordenan las etiquetas
+orden<-c("Mujeres","Hombres","I","II" ,"III" ,"IV", "V", "VI" ,"VII" ,"VIII" ,"IX" ,"X" ,"65 a 69 años" ,"70 a 74 años" ,"75 a 79 años" ,"80 y más años" ,"Sin primaria","Primaria" ,"Secundaria" ,"Preparatoria" ,"Profesional" , "Posgrado")
+datos$categoria<- factor(datos$categoria, levels=as.character(orden))
+
+capa_estados <-readOGR("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases", layer="ESTADOS")
+
+estados <- fortify(capa_estados, region="CVE_ENT")
+
+```
+
+
+
+### Ingresos por pensión
+
+```{r echo=FALSE , message=FALSE , warning=FALSE, out.width = "600px"}
+knitr::include_graphics("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Documento/Gráficas/Tabla 4.2.png")
+```
+
+<br>
+<br>
+
+```{r echo=FALSE , message=FALSE , warning=FALSE, out.width = "600px"}
+knitr::include_graphics("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Documento/Gráficas/Tabla 4.3.png")
+```
+
+### Ingresos y género 
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+datos_pesos <- filter(datos,datos$categoria2=="sex" & datos$cien== "d_0_99")
+datos_porcentaje <- filter(datos,datos$categoria2=="sex" & datos$cien== "d_0_99" & datos$variable!="Ingreso <br>monetario")
+
+orden<-c("Ingreso <br>monetario","Otras <br>transferencias","Donativos <br>(familias)","Pensión no<br> contributiva","Pensión <br>contributiva","Rentas","Laboral")
+
+datos_porcentaje$variable<- factor(datos_porcentaje$variable, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+p <- ggplot(datos_pesos, aes(x=variable, y=valor,group=categoria, text= paste("Categoría:", categoria,
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:$", format(round(LS,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:$", format(round(LI,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV,1),
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%")))) +   
+  geom_bar(aes(fill = categoria), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor+320,group=categoria ,label=format(round(valor,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1)) + 
+    geom_text(aes(x=variable, y=valor+100,group=categoria ,label=paste("(",round(porcentaje,0),"%)")),size = 2, 
+              position=position_dodge(1)) + theme_bw() + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face ="bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + 
+    scale_fill_manual(values=c("red","blue")) + ggtitle("Ingreso monetario individual por género")
+
+
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubro de ingreso"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+<br>
+<br>
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_porcentaje, aes(x=categoria, y=porcentaje,text= paste("Ingreso:", variable,
+                                                     "<br>Categoría:", categoria,                        
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%"),
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=cum_porcen-(.5*porcentaje),label=paste(round(porcentaje,0),"%")), size = 3.5,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("orange","#6495ED","#CC0000","#00008B","#A52A2A","#556B2F")) +
+    theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face ="bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black"))+ ggtitle("Ingreso monetario individual por género")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Género"),
+         yaxis = list(title = "Porcentaje del ingreso")) 
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+### Ingresos y quintil 
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+datos_pesos <- filter(datos,datos$categoria2=="quin0" & datos$cien== "d_0_99")
+datos_porcentaje <- filter(datos,datos$categoria2=="quin0" & datos$cien== "d_0_99" & datos$variable!="Ingreso <br>monetario")
+
+orden<-c("Ingreso <br>monetario","Otras <br>transferencias","Donativos <br>(familias)","Pensión no<br> contributiva","Pensión <br>contributiva","Rentas","Laboral")
+datos_porcentaje$variable<- factor(datos_porcentaje$variable, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, results='hide', message=FALSE , warning=FALSE}
+p <- ggplot(datos_pesos, aes(x=variable, y=valor,group=categoria, text= paste("Categoría:", categoria,
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:", format(round(LS,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:", format(round(LI,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV,1),
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%")))) +   
+  geom_bar(aes(fill = categoria), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor+320,group=categoria ,label=format(round(valor,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1)) + 
+    geom_text(aes(x=variable, y=valor+100,group=categoria ,label=paste("(",round(porcentaje,0),"%)")),size = 2, 
+              position=position_dodge(1)) + theme_bw() + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Ingreso monetario individual por quintil")
+
+
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubro de ingreso"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+
+<br>
+<br>
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_porcentaje, aes(x=categoria, y=porcentaje,text= paste("Ingreso:", variable,
+                                                     "<br>Quintil:", categoria,                        
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%"),
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=cum_porcen-(.5*porcentaje),label=paste(round(porcentaje,0),"%")), size = 4,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("orange","#6495ED","#CC0000","#00008B","#A52A2A","#556B2F")) +
+    theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Ingreso monetario individual por quintil")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Quintil de ingreso monetario"),
+         yaxis = list(title = "Porcentaje del ingreso"))
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+### Ingresos y edad
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+datos_pesos <- filter(datos,datos$categoria2=="eda" & datos$cien== "d_0_99")
+datos_porcentaje <- filter(datos,datos$categoria2=="eda" & datos$cien== "d_0_99" & datos$variable!="Ingreso <br>monetario")
+
+
+orden<-c("Ingreso <br>monetario","Otras <br>transferencias","Donativos <br>(familias)","Pensión no<br> contributiva","Pensión <br>contributiva","Rentas","Laboral")
+datos_porcentaje$variable<- factor(datos_porcentaje$variable, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+p <- ggplot(datos_pesos, aes(x=variable, y=valor,group=categoria, text= paste("Categoría:", categoria,
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:", format(round(LS,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:", format(round(LI,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV,1),
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%")))) +   
+  geom_bar(aes(fill = categoria), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor+230,group=categoria ,label=format(round(valor,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1)) + 
+    geom_text(aes(x=variable, y=valor+80,group=categoria ,label=paste(round(porcentaje,0),"%")),size = 2, 
+              position=position_dodge(1)) + theme_bw() + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Ingreso monetario individual por rango de edad")
+
+
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubro de ingreso"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+<br>
+<br>
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_porcentaje, aes(x=categoria, y=porcentaje,text= paste("Ingreso:", variable,
+                                                     "<br>Categoría:", categoria,                        
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%"),
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=cum_porcen-(.5*porcentaje),label=paste(round(porcentaje,0),"%")), size = 4,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("orange","#6495ED","#CC0000","#00008B","#A52A2A","#556B2F")) +
+    theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Ingreso monetario individual por rango de edad")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rango de edad"),
+         yaxis = list(title = "Porcentaje del ingreso"))
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+### Ingresos y educación
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+datos_pesos <- filter(datos,datos$categoria2=="edu" & datos$cien== "d_0_99")
+datos_porcentaje <- filter(datos,datos$categoria2=="edu" & datos$cien== "d_0_99" & datos$variable!="Ingreso <br>monetario")
+
+
+orden<-c("Ingreso <br>monetario","Otras <br>transferencias","Donativos <br>(familias)","Pensión no<br> contributiva","Pensión <br>contributiva","Rentas","Laboral")
+datos_porcentaje$variable<- factor(datos_porcentaje$variable, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, results='hide', message=FALSE , warning=FALSE}
+p <- ggplot(datos_pesos, aes(x=variable, y=valor,group=categoria, text= paste("Categoría:", categoria,
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:", format(round(LS,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:", format(round(LI,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV,1),
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%")))) +   
+  geom_bar(aes(fill = categoria), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor+320,group=categoria ,label=format(round(valor,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1)) + 
+    geom_text(aes(x=variable, y=valor+100,group=categoria ,label=paste("(",round(porcentaje,0),"%)")),size = 2, 
+              position=position_dodge(1)) + theme_bw() + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank())  + ggtitle("Ingreso monetario individual por nivel educativo")
+
+
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubro de ingreso"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+
+<br>
+<br>
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos_porcentaje, aes(x=categoria, y=porcentaje,text= paste("Ingreso:", variable,
+                                                     "<br>Categoría:", categoria,                        
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%"),
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=cum_porcen-(.5*porcentaje),label=paste(round(porcentaje,0),"%")), size =3,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("orange","#6495ED","#CC0000","#00008B","#A52A2A","#556B2F")) +
+    theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Ingreso monetario individual por nivel educativo")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Nivel de educación"),
+         yaxis = list(title = "Porcentaje del ingreso"))
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+### Ingresos y pensión
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/ingresos_por_catacterística_pensión.csv")
+
+datos$variable      <- as.character(datos$variable)
+datos$condicion <- as.character(datos$condicion)
+
+datos$cum_porcen[datos$porcentaje<=1.5] <-NA
+
+datos$variable [datos$variable =="labo"] <- "Laboral"
+datos$variable [datos$variable =="rent"] <- "Rentas"
+datos$variable [datos$variable =="cont"] <- "Pensión<br> contributiva"
+datos$variable [datos$variable =="no_cont"] <- "Pensión no<br> contributiva"
+datos$variable [datos$variable =="don"] <- "Donativos <br>(familias)"
+datos$variable [datos$variable =="o_trans"] <- "Otras <br>transferencias"
+datos$variable [datos$variable =="ing_mon"] <- "Ingreso <br>monetario"
+orden<-c("Laboral","Rentas", "Pensión<br> contributiva", "Pensión no<br> contributiva","Donativos <br>(familias)" ,"Otras <br>transferencias", "Ingreso <br>monetario")
+datos$variable<- factor(datos$variable, levels=as.character(orden))
+
+#Condicion pensionaria
+datos$categoria[datos$condicion=="d_contributivas"] <- "Pensión<br> contributiva"
+datos$categoria[datos$condicion=="d_no_contributivas"] <- "Pensión no<br> contributiva"
+datos$categoria[datos$condicion=="d_pension"] <- "Con pensión"
+datos$categoria[datos$condicion=="d_sin_pension"] <- "Sin pensión"
+datos$categoria[datos$condicion=="unos"] <- "Total"
+
+# Aquí se ordenan las etiquetas
+orden<-c("Pensión<br> contributiva", "Pensión no<br> contributiva","Con pensión","Sin pensión", "Total")
+datos$categoria<- factor(datos$categoria, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+datos_pesos <- filter(datos, datos$cien== "d_0_99")
+datos_porcentaje <- filter(datos, datos$cien== "d_0_99" & datos$variable!="Ingreso <br>monetario")
+
+
+orden<-c("Ingreso <br>monetario","Otras <br>transferencias","Donativos <br>(familias)","Pensión no<br> contributiva","Pensión<br> contributiva","Rentas","Laboral")
+datos_porcentaje$variable<- factor(datos_porcentaje$variable, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, results='hide', message=FALSE , warning=FALSE}
+p <- ggplot(datos_pesos, aes(x=variable, y=valor,group=condicion, text= paste("Categoría:", variable,
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:", format(round(LS,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:", format(round(LI,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV,1),
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%")))) +   
+  geom_bar(aes(fill = categoria), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor+320,group=condicion ,label=format(round(valor,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1)) + 
+    geom_text(aes(x=variable, y=valor+100,group=condicion ,label=paste(round(porcentaje,0),"%")),size = 2, 
+              position=position_dodge(1)) + theme_bw() + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank())  + ggtitle("Ingreso monetario individual por situación pensionaria")
+
+
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubro de ingreso"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+
+<br>
+<br>
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(filter(datos_porcentaje,datos_porcentaje$categoria!="Total"), aes(x=categoria, y=porcentaje,text= paste("Ingreso:", variable,
+                                                     "<br>Categoría:", categoria,                        
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%"),
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= variable), width = .5) +
+    geom_text(aes(x=categoria, y=cum_porcen-(.5*porcentaje),label=paste(round(porcentaje,0),"%")), size = 3,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("orange","#6495ED","#CC0000","#00008B","#A52A2A","#556B2F")) +
+    theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Ingreso monetario individual por situación pensionaria")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Situación pensionaria"),
+         yaxis = list(title = "Porcentaje del ingreso"))
+```
+*No se considera al 1% de mayor ingreso corriente monetario individual. 
+
+### Ingresos y entidad
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/ingresos_por_catacterística.csv")
+
+datos$variable      <- as.character(datos$variable)
+datos$categoria <- as.character(datos$categoria)
+
+datos$cum_porcen[datos$porcentaje<=1.5] <-NA
+
+datos$variable [datos$variable =="labo"] <- "Laboral"
+datos$variable [datos$variable =="rent"] <- "Rentas"
+datos$variable [datos$variable =="cont"] <- "Pensión <br>contri"
+datos$variable [datos$variable =="no_cont"] <- "Pensión <br>no contri"
+datos$variable [datos$variable =="don"] <- "Donativos <br>(otras fam)"
+datos$variable [datos$variable =="o_trans"] <- "Otras <br>transf"
+datos$variable [datos$variable =="ing_mon"] <- "Ingreso <br>monetario"
+orden<-c("Laboral","Rentas", "Pensión <br>contri", "Pensión <br>no contri","Donativos <br>(otras fam)" ,"Otras <br>transf", "Ingreso <br>monetario")
+datos$variable<- factor(datos$variable, levels=as.character(orden))
+
+#Entidad
+
+df <- df_mxstate
+
+datos$id[datos$categoria=="ent_1"]  <- "01"
+datos$id[datos$categoria=="ent_2"]  <- "02"
+datos$id[datos$categoria=="ent_3"]  <- "03"
+datos$id[datos$categoria=="ent_4"]  <- "04"  
+datos$id[datos$categoria=="ent_5"]  <- "05"
+datos$id[datos$categoria=="ent_6"]  <- "06"
+datos$id[datos$categoria=="ent_7"]  <- "07"
+datos$id[datos$categoria=="ent_8"]  <- "08"
+datos$id[datos$categoria=="ent_9"]  <- "09"
+datos$id[datos$categoria=="ent_10"] <- "10"
+datos$id[datos$categoria=="ent_11"] <- "11"
+datos$id[datos$categoria=="ent_12"] <- "12"
+datos$id[datos$categoria=="ent_13"] <- "13"
+datos$id[datos$categoria=="ent_14"] <- "14"
+datos$id[datos$categoria=="ent_15"] <- "15"
+datos$id[datos$categoria=="ent_16"] <- "16"
+datos$id[datos$categoria=="ent_17"] <- "17"
+datos$id[datos$categoria=="ent_18"] <- "18"
+datos$id[datos$categoria=="ent_19"] <- "19"
+datos$id[datos$categoria=="ent_20"] <- "20"
+datos$id[datos$categoria=="ent_21"] <- "21"
+datos$id[datos$categoria=="ent_22"] <- "22"
+datos$id[datos$categoria=="ent_23"] <- "23"
+datos$id[datos$categoria=="ent_24"] <- "24"
+datos$id[datos$categoria=="ent_25"] <- "25"
+datos$id[datos$categoria=="ent_26"] <- "26"
+datos$id[datos$categoria=="ent_27"] <- "27"
+datos$id[datos$categoria=="ent_28"] <- "28"
+datos$id[datos$categoria=="ent_29"] <- "29"
+datos$id[datos$categoria=="ent_30"] <- "30"
+datos$id[datos$categoria=="ent_31"] <- "31"
+datos$id[datos$categoria=="ent_32"] <- "32" 
+
+datos$categoria[datos$categoria=="ent_1"]  <- "Aguascalientes"
+datos$categoria[datos$categoria=="ent_2"]  <- "Baja California"
+datos$categoria[datos$categoria=="ent_3"]  <- "Baja California Sur"
+datos$categoria[datos$categoria=="ent_4"]  <- "Campeche"  
+datos$categoria[datos$categoria=="ent_5"]  <- "Coahuila"
+datos$categoria[datos$categoria=="ent_6"]  <- "Colima"
+datos$categoria[datos$categoria=="ent_7"]  <- "Chiapas"
+datos$categoria[datos$categoria=="ent_8"]  <- "Chihuahua"
+datos$categoria[datos$categoria=="ent_9"]  <- "Ciudad de México"
+datos$categoria[datos$categoria=="ent_10"] <- "Durango"
+datos$categoria[datos$categoria=="ent_11"] <- "Guanajuato"
+datos$categoria[datos$categoria=="ent_12"] <- "Guerrero"
+datos$categoria[datos$categoria=="ent_13"] <- "Hidalgo"
+datos$categoria[datos$categoria=="ent_14"] <- "Jalisco"
+datos$categoria[datos$categoria=="ent_15"] <- "Estado de México"
+datos$categoria[datos$categoria=="ent_16"] <- "Michoacán"
+datos$categoria[datos$categoria=="ent_17"] <- "Morelos"
+datos$categoria[datos$categoria=="ent_18"] <- "Nayarit"
+datos$categoria[datos$categoria=="ent_19"] <- "Nuevo León"
+datos$categoria[datos$categoria=="ent_20"] <- "Oaxaca"
+datos$categoria[datos$categoria=="ent_21"] <- "Puebla"
+datos$categoria[datos$categoria=="ent_22"] <- "Querétaro"
+datos$categoria[datos$categoria=="ent_23"] <- "Quintana Roo"
+datos$categoria[datos$categoria=="ent_24"] <- "San Luis Potosí"
+datos$categoria[datos$categoria=="ent_25"] <- "Sinaloa"
+datos$categoria[datos$categoria=="ent_26"] <- "Sonora"
+datos$categoria[datos$categoria=="ent_27"] <- "Tabasco"
+datos$categoria[datos$categoria=="ent_28"] <- "Tamaulipas"
+datos$categoria[datos$categoria=="ent_29"] <- "Tlaxcala"
+datos$categoria[datos$categoria=="ent_30"] <- "Veracruz"
+datos$categoria[datos$categoria=="ent_31"] <- "Yucatán"
+datos$categoria[datos$categoria=="ent_32"] <- "Zacatecas" 
+
+
+capa_estados <-readOGR("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases", layer="ESTADOS")
+
+estados <- fortify(capa_estados, region="CVE_ENT")
+
+```
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+
+datos_e <- filter(datos, datos$categoria2== "ent")
+
+datos_pesos <- filter(datos_e, datos_e$cien== "d_0_99")
+
+datos_porcentaje <- filter(datos_e, datos_e$cien== "d_0_99" & datos_e$variable=="Pensión <br>contri")
+
+centroids <- SpatialPointsDataFrame(gCentroid(capa_estados, byid=TRUE), capa_estados@data, match.ID=F)
+
+centroids <- as.data.frame(centroids)
+
+names(centroids) <- c("id" , "Estado" ,"Longitude", "Latitude") 
+
+datos_porcentaje$valor = round(datos_porcentaje$valor, 2)
+
+datos_porcentaje$LI = round(datos_porcentaje$LI, 2)
+
+datos_porcentaje$LS = round(datos_porcentaje$LS, 2)
+
+datos_porcentaje$CV = round(datos_porcentaje$CV, 2)
+
+datos_porcentaje$porcentaje =  datos_porcentaje$porcentaje/100
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$porcentaje, "id" = datos_porcentaje$id)
+
+orden<-c("01", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+         "02", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+         "03", "30", "31", "32", "04", "05", "06", "07", "08", "09")
+
+porcentaje$id<- factor(porcentaje$id, levels=as.character(orden))
+
+centroids$id <- factor(centroids$id, levels= as.character(orden))
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+ggplotly(ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=estados_mapa$valor,
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$categoria,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$porcentaje*100,0),"%"),
+                                    "<br>Monto: "     ,         
+                                    estados_mapa$valor, 
+                                    "<br>Límite inferior: ",    
+                                    estados_mapa$LI,
+                                    "<br>Límite superior: ",    
+                                    estados_mapa$LS,
+                                    "<br>Coef. de variación: ", 
+                                    estados_mapa$CV)), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'Blues', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Monto", labels = comma) + 
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste("$", format(round(datos_porcentaje$valor,0),
+                                                                   big.mark=",",scientific=FALSE))
+                                         ), size=2.5) + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Monto promedio de pensión contributiva (Pesos)"), 
+         tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br> *No se considera al 1% de mayor ingreso corriente.
+<br>
+<br>
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$porcentaje, "id" = datos_porcentaje$id)
+
+orden<-c("01", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+         "02", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+         "03", "30", "31", "32", "04", "05", "06", "07", "08", "09")
+
+porcentaje$id<- factor(porcentaje$id, levels=as.character(orden))
+
+centroids$id <- factor(centroids$id, levels= as.character(orden))
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+ggplotly(ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=round(estados_mapa$porcentaje*100, 0),
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$categoria,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$porcentaje*100,0),"%"),
+                                    "<br>Monto: "     ,         
+                                    estados_mapa$valor, 
+                                    "<br>Límite inferior: ",    
+                                    estados_mapa$LI,
+                                    "<br>Límite superior: ",    
+                                    estados_mapa$LS,
+                                    "<br>Coef. de variación: ", 
+                                    estados_mapa$CV)), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'Blues', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Porcentaje") + 
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste(round(datos_porcentaje$porcentaje*100,0), "%")
+                                         ), size=2.5) + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Participación de las pensiones contributivas en el ingreso (Porcentaje)"), 
+         tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br> *No se considera al 1% de mayor ingreso corriente.
+<br>
+<br>
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+#Aquí se filtran las bases de datos
+
+datos_e <- filter(datos, datos$categoria2== "ent")
+
+datos_pesos <- filter(datos_e, datos_e$cien== "d_0_99")
+
+datos_porcentaje <- filter(datos_e, datos_e$cien== "d_0_99" & datos_e$variable=="Pensión <br>no contri")
+
+orden<- c("AGS", "BC", "BCS", "CAMP", "COAH", "COL", "CHPS", "CHIH", "CDMX", "DGO", "GTO", "GRO", "HGO", "JAL", "MEX", "MICH", "MOR", "NAY", "NL", "OAX", "PUE", "QRO", "QROO", "SLP", "SIN", "SON", "TAB", "TAM", "TLAX", "VER", "YUC", "ZAC")
+
+datos_porcentaje$variable<- factor(datos_porcentaje$categoria, levels=as.character(orden))
+
+centroids <- SpatialPointsDataFrame(gCentroid(capa_estados, byid=TRUE), capa_estados@data, match.ID=F)
+
+centroids <- as.data.frame(centroids)
+
+names(centroids) <- c("id" , "Estado" ,"Longitude", "Latitude") 
+
+datos_porcentaje$valor = round(datos_porcentaje$valor, 2)
+
+datos_porcentaje$LI = round(datos_porcentaje$LI, 2)
+
+datos_porcentaje$LS = round(datos_porcentaje$LS, 2)
+
+datos_porcentaje$CV = round(datos_porcentaje$CV, 2)
+
+datos_porcentaje$porcentaje =  datos_porcentaje$porcentaje/100
+
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$porcentaje, "id" = datos_porcentaje$id)
+
+orden<-c("01", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+         "02", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+         "03", "30", "31", "32", "04", "05", "06", "07", "08", "09")
+
+porcentaje$id<- factor(porcentaje$id, levels=as.character(orden))
+
+centroids$id <- factor(centroids$id, levels= as.character(orden))
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+ggplotly(ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=estados_mapa$valor,
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$categoria,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$porcentaje*100,0),"%"),
+                                    "<br>Monto: "     ,         
+                                    estados_mapa$valor, 
+                                    "<br>Límite inferior: ",    
+                                    estados_mapa$LI,
+                                    "<br>Límite superior: ",    
+                                    estados_mapa$LS,
+                                    "<br>Coef. de variación: ", 
+                                    estados_mapa$CV)), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'OrRd', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Monto", labels = comma) +
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste("$", format(round(datos_porcentaje$valor,0),
+                                                                   big.mark=",",scientific=FALSE))
+                                         ), size=2.5)+ theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Monto promedio de pensión no contributiva (Pesos)"), 
+         tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br> *No se considera al 1% de mayor ingreso corriente.
+<br>
+<br>
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+
+estados_mapa <- inner_join(estados, datos_porcentaje, by="id")
+
+porcentaje <- data.frame("porcentaje" = datos_porcentaje$porcentaje, "id" = datos_porcentaje$id)
+
+orden<-c("01", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+         "02", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+         "03", "30", "31", "32", "04", "05", "06", "07", "08", "09")
+
+porcentaje$id<- factor(porcentaje$id, levels=as.character(orden))
+
+centroids$id <- factor(centroids$id, levels= as.character(orden))
+
+estadosn <- inner_join(centroids, porcentaje, by="id")
+                  
+cnames <- aggregate(cbind(Longitude, Latitude) ~ id, data=estadosn, FUN=function(x)mean(range(x)))
+
+theme_clean <- function(base_size = 12) {
+    require(grid)
+    theme_grey(base_size) %+replace%
+            theme(
+                    axis.title = element_blank(),
+                    axis.text = element_blank(),
+                    panel.background = element_blank(),
+                    panel.grid = element_blank(),
+                    axis.ticks.length = unit(0,"cm"), 
+                    axis.ticks.margin = unit(0,"cm"),
+                    panel.margin = unit(0,"lines"),
+                    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+                    complete = TRUE
+            )}
+
+ggplotly(ggplot(estados_mapa) +  
+           geom_polygon(aes(x=long, y=lat, group=group, 
+                            fill=round(estados_mapa$porcentaje*100, 0),
+                            text = 
+                              paste("Estado: ",
+                                    estados_mapa$categoria,
+                                    "<br>Porcentaje: ",
+                                    paste(round(estados_mapa$porcentaje*100,0),"%"),
+                                    "<br>Monto: "     ,         
+                                    estados_mapa$valor, 
+                                    "<br>Límite inferior: ",    
+                                    estados_mapa$LI,
+                                    "<br>Límite superior: ",    
+                                    estados_mapa$LS,
+                                    "<br>Coef. de variación: ", 
+                                    estados_mapa$CV)), 
+                        color = "white", lwd = ".3") +
+           scale_colour_distiller(type = "seq", palette = 'OrRd', 
+                                  direction = 1, aesthetics = "fill",
+                                  name = "Porcentaje", labels = comma) +
+           theme_clean() + geom_text(data=cnames, 
+                                     aes(Longitude, Latitude, 
+                                         label = paste(round(datos_porcentaje$porcentaje*100,0), "%")
+                                         ), size=2.5)+ theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Participación de las pensiones no contributivas en el ingreso (Porcentaje)"), 
+         tooltip = c("text")) %>%
+  layout(legend = list(orientation = 'h'), 
+         autosize = F, width = 1000, height = 700)
+
+
+```
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br> *No se considera al 1% de mayor ingreso corriente.
+<br>
+<br>
+
+
+### Ingresos y edad (Hogares con P65+)
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/Ingresos P64ymenos y P65ymás en hogares con P65ymás.csv")
+
+datos$variable      <- as.character(datos$variable)
+
+datos$ingreso [datos$variable == "laboral_64ymenos" |datos$variable == "laboral_65ymas"] <- "Laboral"
+datos$ingreso [datos$variable == "rentas_64ymenos" |datos$variable == "rentas_65ymas"]  <- "Rentas"
+datos$ingreso [datos$variable == "contributivas_64ymenos" |datos$variable == "contributivas_65ymas"]  <- "Pensión<br>contributiva"
+datos$ingreso [datos$variable == "no_contributivas_64ymenos" |datos$variable == "no_contributivas_65ymas"]  <- "Pensión no<br>contributiva"
+datos$ingreso [datos$variable == "donativos_otras_fam_64ymenos" |datos$variable == "donativos_otras_fam_65ymas"]  <- "Donativos <br>(familias)"
+datos$ingreso [datos$variable == "otras_transfer_64ymenos" |datos$variable == "otras_transfer_65ymas"]  <- "Otras <br>transferencias"
+datos$ingreso [datos$variable == "nomon"] <- "No monetario"
+datos$ingreso [datos$variable == "ict"] <- "Ingreso<br>corriente<br>total"
+
+
+orden<- c("Otras <br>transferencias","Donativos <br>(familias)","Pensión no<br>contributiva","Pensión<br>contributiva","Rentas","Laboral", "Ingreso <br>monetario","No monetario", "Ingreso<br>corriente<br>total")
+datos$ingreso<- factor(datos$ingreso, levels=as.character(orden))
+
+
+# Aquí se ordenan las etiquetas
+datos$edad      <- as.character(datos$edad)
+
+datos$csum <- ave(datos$porcentaje, datos$edad, FUN=cumsum)
+datos$csum[datos$porcentaje<=1] <-NA
+
+datos$edad[datos$edad=="P65 y mÃ¡s"]<- "P65 y más"
+orden<-c("P64 y menos", "P65 y más", "Hogar")
+datos$edad<- factor(datos$edad, levels=as.character(orden))
+
+
+datos <- filter(datos, datos$variable!= "ict")
+
+```
+
+<br>
+<br>
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+
+p <- ggplot(datos, aes(x=edad, y=porcentaje,text= paste("Ingreso:", ingreso,
+                                                     "<br>Origen del ingreso:", edad,                        
+                                                     "<br>Porcentaje:", paste(round(porcentaje,0),"%"),
+                                                     "<br>Pesos mensuales:$", format(round(valor,0),big.mark=",",scientific=FALSE)))) +   
+  geom_bar(stat="identity", position = "stack", aes(fill= ingreso), width = .5) +
+    geom_text(aes(x=edad, y=csum-(.5*porcentaje),label=paste(round(porcentaje,0),"%")), size = 3.5,colour = "white", fontface = "bold") + 
+    scale_fill_manual(values=c("orange","#6495ED","#CC0000","#00008B","#A52A2A","#556B2F","grey")) +
+    theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Rubros de ingreso corriente total del hogar")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Origen del ingreso"),
+         yaxis = list(title = "Porcentaje del ingreso del hogar"))
+```
+*No se considera al 1% de mayor ingreso corriente. 
+
+### Escalas de equivalencia
+
+#### Datos de ingreso y gasto a nivel hogar:
+* Los datos de ingreso no monetario y gasto del hogar se capturan principalmente a nivel hogar en la ENIGH.
+* Por lo que es necesario transformar estos recursos a nivel persona.
+
+<br>
+
+#### Escalas de equivalencia:
+
+* Las escalas de equivalencia asignan un peso a cada integrante del hogar de acuerdo a sus características, generalmente edad y sexo.
+* La presente investigación utilizan escalas de equivalencia que consideran al adulto mayor.
+
+<br>
+
+```{r echo=FALSE , message=FALSE , warning=FALSE, out.width = "600px"}
+knitr::include_graphics("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Documento/Gráficas/Tabla-escalas.png")
+```
+
+### Ingresos y gastos (por persona escalado) 
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+datos <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/Fuente de ingresoy gasto P65 (escalado).csv")
+
+datos$variable      <- as.character(datos$variable)
+
+datos$variable [datos$variable =="laboral"] <- "Laboral"
+datos$variable [datos$variable =="rentas"] <- "Rentas"
+datos$variable [datos$variable =="contributivas"] <- "Pensión<br>contributiva"
+datos$variable [datos$variable =="no_contributivas"] <- "Pensión no<br>contributiva"
+datos$variable [datos$variable =="donativos_otras_fam"] <- "Donativos<br>(familias)"
+datos$variable [datos$variable =="otras_transfer"] <- "Otras<br>transferencias"
+datos$variable [datos$variable =="nomon"] <- "No <br>monetario"
+datos$variable [datos$variable =="ict"] <- "Ingreso <br>corriente"
+
+datos$categoria [datos$variable =="Laboral"] <- "Ingresos"
+datos$categoria [datos$variable =="Rentas"] <- "Ingresos"
+datos$categoria [datos$variable =="Pensión<br>contributiva"] <- "Ingresos"
+datos$categoria [datos$variable =="Pensión no<br>contributiva"] <- "Ingresos"
+datos$categoria [datos$variable =="Donativos<br>(familias)"] <- "Ingresos"
+datos$categoria [datos$variable =="Otras<br>transferencias"] <- "Ingresos"
+datos$categoria [datos$variable =="No <br>monetario"] <- "Ingresos"
+datos$categoria [datos$variable =="Ingreso <br>corriente"] <- "Ingresos"
+
+
+datos$variable <- str_replace_all(datos$variable, "alimentos", "Alimentos")
+datos$variable <- str_replace_all(datos$variable, "tab_alcoh", "Tabaco y<br> alcohol")
+datos$variable <- str_replace_all(datos$variable, "vesti_calz", "Vestido")
+datos$variable <- str_replace_all(datos$variable, "vivienda", "Vivienda")
+datos$variable <- str_replace_all(datos$variable, "hogar", "Hogar")
+datos$variable <- str_replace_all(datos$variable, "salud", "Salud")
+datos$variable <- str_replace_all(datos$variable, "transporte", "Transporte")
+datos$variable <- str_replace_all(datos$variable, "educa_espa", "Educación y<br> esparcimiento")
+datos$variable <- str_replace_all(datos$variable, "personales", "Personales")
+datos$variable <- str_replace_all(datos$variable, "transf_gas", "Transferencias")
+datos$variable <- str_replace_all(datos$variable, "gasto_mon", "Gasto<br> monetario")
+
+datos$categoria [datos$variable =="Alimentos"] <- "Gastos"
+datos$categoria [datos$variable =="Tabaco y<br> alcohol"] <- "Gastos"
+datos$categoria [datos$variable =="Vestido"] <- "Gastos"
+datos$categoria [datos$variable =="Vivienda"] <- "Gastos"
+datos$categoria [datos$variable =="Hogar"] <- "Gastos"
+datos$categoria [datos$variable =="Salud"] <- "Gastos"
+datos$categoria [datos$variable =="Transporte"] <- "Gastos"
+datos$categoria [datos$variable =="Educación y<br> esparcimiento"] <- "Gastos"
+datos$categoria [datos$variable =="Personales"] <- "Gastos"
+datos$categoria [datos$variable =="Transferencias"] <- "Gastos"
+datos$categoria [datos$variable =="Gasto<br> monetario"] <- "Gastos"
+
+
+orden<-c("Laboral", "Rentas", "Pensión<br>contributiva", "Pensión no<br>contributiva", "Donativos<br>(familias)", "Otras<br>transferencias","No <br>monetario", "Ingreso <br>corriente", "Alimentos","Tabaco y<br> alcohol", "Vestido", "Vivienda", "Hogar", "Salud", "Transporte","Educación y<br> esparcimiento", "Personales", "Transferencias", "Gasto<br> monetario")
+datos$variable<- factor(datos$variable, levels=as.character(orden))
+
+```
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+p <- ggplot(filter(datos, datos$categoria=="Ingresos"), aes(x=variable, y=valor_0_99, fill=variable, text= paste("Categoría:", categoria,
+                                                     "<br>Pesos mensuales:$", format(round(valor_0_99,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:", format(round(LS_0_99,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:", format(round(LI_0_99,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV_0_99,1)))) +   
+  geom_bar(aes(), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor_0_99+420 ,label=format(round(valor_0_99,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1)) +  
+    geom_text(aes(x=variable, y=valor_0_99+100, label=paste("(",round(valor_0_99/4676.60359*100,0),"%)")),size = 2.2, 
+              position=position_dodge(1)) + theme_bw() + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + theme(axis.text.x = element_text(angle = 90, hjust = 1,colour = "black"))+ 
+scale_fill_manual( values = c("#556B2F","#A52A2A","#00008B","#CC0000","#6495ED","orange","grey","black")) + ggtitle("Rubros de ingreso corriente total por persona (escalado)")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubros de ingreso"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+*No se considera al 1% de mayor ingreso corriente. 
+
+```{r echo=FALSE, message=FALSE , warning=FALSE}
+p <- ggplot(filter(datos, datos$categoria=="Gastos"), aes(x=variable, y=valor_0_99, fill=variable, text= paste("Categoría:", categoria,
+                                                     "<br>Pesos mensuales:$", format(round(valor_0_99,0),big.mark=",",scientific=FALSE), 
+                                                     "<br>Límite superior:", format(round(LS_0_99,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Límite inferior:", format(round(LI_0_99,0),big.mark=",",scientific=FALSE),
+                                                     "<br>Coef. de variación:", round(CV_0_99,1)))) +   
+  geom_bar(aes(), position = "dodge", stat="identity") + 
+    geom_text(aes(x=variable, y=valor_0_99+320 ,label=format(round(valor_0_99,0),big.mark=",",scientific=FALSE)),size = 2.8, 
+              position=position_dodge(1))+  
+    geom_text(aes(x=variable, y=valor_0_99+100, label=paste("(",round(valor_0_99/3193.96657*100,0),"%)")),size = 2.2, 
+              position=position_dodge(1)) + theme_bw()+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) + theme(text=element_text(size=15,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + 
+scale_fill_manual( values = c("red","blue", "green4", "orange2","maroon2","royalblue1","sienna", "#009E73","#CC79A7","#56B4E9","black")) + ggtitle("Rubros de gasto corriente total por persona (escalado)")
+
+ggplotly(p, tooltip = c("text")) %>%
+  layout(xaxis = list(title = "Rubros de gasto"),
+         yaxis = list(title = "Pesos mensuales"))
+```
+*No se considera al 1% de mayor ingreso corriente. 
+
+### Monto de gasto (por quintil)
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+base <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/Ingresos y gastos (por quintil).csv")
+
+base$variable <- str_replace_all(base$variable, "alimentos", "Alimentos")
+base$variable <- str_replace_all(base$variable, "tab_alcoh", "Tabaco y alcohol")
+base$variable <- str_replace_all(base$variable, "vesti_calz", "Vestido")
+base$variable <- str_replace_all(base$variable, "vivienda", "Vivienda")
+base$variable <- str_replace_all(base$variable, "hogar", "Hogar")
+base$variable <- str_replace_all(base$variable, "salud", "Salud")
+base$variable <- str_replace_all(base$variable, "transporte", "Transporte")
+base$variable <- str_replace_all(base$variable, "educa_espa", "Educación y esparcimiento")
+base$variable <- str_replace_all(base$variable, "personales", "Personales")
+base$variable <- str_replace_all(base$variable, "transf_gas", "Transferencias")
+
+base$tipo_hog<-as.character(base$tipo_hog)
+
+base$tipo_hog[base$tipo_hog=="H65_contri"]<- "A) Contributiva<br>(con P65+)"
+base$tipo_hog[base$tipo_hog=="H65_nocontri"]<- "B) No contributiva<br>(con P65+)"
+base$tipo_hog[base$tipo_hog=="H65_ambos"]<- "C) Contributiva y<br>no contributiva (con P65+)"
+base$tipo_hog[base$tipo_hog=="H65_sinpen"]<- "D) Sin pensión<br>(con P65+)"
+base$tipo_hog[base$tipo_hog=="sinH65"]<- "E) Sin P65+"
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+prop_gasto<-ggplot(base, aes(x= quintil, y=valor, group= tipo_hog, color= tipo_hog,
+                                                    text= paste('Quintil:',quintil, 
+                                                     "<br>Rango de edad:", tipo_hog,
+                                                     "<br>Monto de gasto:", round(valor,1), 
+                                                     "<br>Límite superior:", round(LS,1),
+                                                     "<br>Límite inferior:", round(LI,1),
+                                                     "<br>Coef. de variación:", round(CV,1)))) +
+  geom_line() + 
+  scale_color_brewer(name="", palette = "Accent") +
+  facet_wrap(~variable,scales="free_y",ncol= 2, drop=TRUE) + 
+  theme_bw()  +
+  labs(y="Monto de gasto", x="Quintil (en el eje horizontal)") + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank()) + ggtitle("Monto de gasto de los hogares por quintil y situación pensionaria")
+
+ggplotly(prop_gasto, width = 750, height = 600, tooltip = c("text")) %>%
+  layout(xaxis = list(title = ""), yaxis = list(title = ""))
+```
+*No se considera al 1% de mayor ingreso corriente. 
+
+### % de gasto (por quintil)
+
+```{r echo=FALSE , results='hide', message=FALSE , warning=FALSE}
+base <- read.csv("D:/Mis Documentos/Proyectos/Ingreso y gasto del adulto mayor/Stata/Ejercicios/ENIGH-2016/Bases/Ingresos y gastos (por quintil)_porcentaje.csv")
+
+base$variable <- str_replace_all(base$variable, "alimentos", "Alimentos")
+base$variable <- str_replace_all(base$variable, "tab_alcoh", "Tabaco y alcohol")
+base$variable <- str_replace_all(base$variable, "vesti_calz", "Vestido")
+base$variable <- str_replace_all(base$variable, "vivienda", "Vivienda")
+base$variable <- str_replace_all(base$variable, "hogar", "Hogar")
+base$variable <- str_replace_all(base$variable, "salud", "Salud")
+base$variable <- str_replace_all(base$variable, "transporte", "Transporte")
+base$variable <- str_replace_all(base$variable, "educa_espa", "Educación y esparcimiento")
+base$variable <- str_replace_all(base$variable, "personales", "Personales")
+base$variable <- str_replace_all(base$variable, "transf_gas", "Transferencias")
+
+base$tipo_hog<-as.character(base$tipo_hog)
+
+base$tipo_hog[base$tipo_hog=="H65_contri"]<- "A) Contributiva<br>(con P65+)"
+base$tipo_hog[base$tipo_hog=="H65_nocontri"]<- "B) No contributiva<br>(con P65+)"
+base$tipo_hog[base$tipo_hog=="H65_ambos"]<- "C) Contributiva y<br>no contributiva (con P65+)"
+base$tipo_hog[base$tipo_hog=="H65_sinpen"]<- "D) Sin pensión<br>(con P65+)"
+base$tipo_hog[base$tipo_hog=="sinH65"]<- "E) Sin P65+"
+
+```
+
+```{r echo=FALSE , message=FALSE , warning=FALSE}
+prop_gasto<-ggplot(base, aes(x= quintil, y=valor, group= tipo_hog, color= tipo_hog,
+                                                    text= paste('Quintil:',quintil, 
+                                                     "<br>Rango de edad:", tipo_hog,
+                                                     "<br>Prop. del gasto:", round(valor,1), 
+                                                     "<br>Límite superior:", round(LS,1),
+                                                     "<br>Límite inferior:", round(LI,1),
+                                                     "<br>Coef. de variación:", round(CV,1)))) +
+  geom_line() + 
+  scale_color_brewer(name="", palette = "Accent") +
+  facet_wrap(~variable,scales="free_y",ncol= 2, drop=TRUE) + 
+  theme_bw()  +
+  labs(y="Porcentaje de gasto",x="Quintil (en el eje horizontal)" ) + theme(text=element_text(size=14,  family="Adobe Caslon Pro Bold",face = "bold"),legend.title=element_blank(),axis.text.x = element_text(colour = "black")) + ggtitle("Porcentaje de gasto de los hogares por quintil y situación pensionaria")
+
+ggplotly(prop_gasto, width = 750, height = 700, tooltip = c("text")) %>%
+  layout(xaxis = list(title = ""), yaxis = list(title = ""))
+```
+*No se considera al 1% de mayor ingreso corriente. 
+
+
+## Consideraciones finales {.tabset .tabset-fade .tabset-pills}
+
+### Principales resultados
+
+#### Cobertura:
+* México cuenta con una baja cobertura de pensiones: contributivas 31% y no contributivas 49%.
+<br>
+* Aproximadamente, una cuarta parte carece de pensión (26%).
+<br>
+
+#### Ingresos por pensión:
+* Las pensiones contributivas son el principal rubro de ingresos monetarios: 46% mujeres y 52% hombres.
+<br>
+* Las pensiones no contributivas representan 13% del ingreso para las mujeres y 6% para los hombres.
+<br>
+* Una tercera parte de adultos mayores tiene ingresos únicamente por pensión.
+<br>
+
+#### Ingresos y gastos:
+* Los hogares con adultos mayores tienen un mayor porcentaje de gasto en alimentos, hogar, salud y vivienda; en contraste, es menor en educación y esparcimiento, transporte y vestido.
+<br>
+* Los hogares con adultos mayores y pensión contributiva tienen un mayor porcentaje de gasto en vivienda.
+<br>
+* Los hogares con adultos mayores y pensión no contributiva tienen un mayor gasto porcentual en salud y hogar.
+<br>
+
+### Reflexiones
+
+#### Reflexiones:
+
+* El análisis presentado se refiere a las pensiones en curso de pago del anterior esquema de BD (generación de transición).
+<br>
+* El número de personas que reciban una pensión contributiva con el nuevo esquema de CD se espera que disminuya. 
+<br>
+* El monto de las pensiones otorgadas bajo la nueva Ley se espera que sea menor, considerando los niveles de subsidio.
+<br>
+*Por lo que disminuirá el ingreso por pensión.
+<br>
+* Este diagnóstico recuerda la necesidad –urgencia- de discutir las posibles áreas de mejora de los principales pilares del andamiaje pensionario del país.
+<br>
+* Actualmente, los sistemas de pensiones contributivos y no contributivos no están conectados entre sí, lo que supone una oportunidad desperdiciada para integrar ambos esquemas y generar mayores incentivos para cotizar en trabajos formales.
+
+
